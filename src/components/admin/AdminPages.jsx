@@ -560,6 +560,7 @@ export function AdminCollectionPage({ isDarkMode, textColor, textMuted, cardBg, 
 
       {editTarget && (
         <EditRecipeModal
+          key={editTarget.id}
           recipe={editTarget} isDarkMode={isDarkMode}
           onClose={() => setEditTarget(null)}
           onSave={async (id, payload) => { await onUpdateRecipe(id, payload); setEditTarget(null); }}

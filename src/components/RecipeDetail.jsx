@@ -96,12 +96,13 @@ const handleSend = async (e) => {
   setSending(true);
   try {
     const newComment = await commentAPI.send(
-  user?.id ?? null,
-  recipeId,
-  text.trim(),
-  user ? user.name : (guestName.trim() || 'Tamu')
-);
-    setComments(prev => [newComment, ...prev]);
+      user?.id ?? null,
+      recipeId,
+      text.trim(),
+      user ? user.name : (guestName.trim() || 'Tamu')
+    );
+    // Pastikan nama tampil di komentar baru
+    setComments(prev => [{ ...newComment, userName: user ? user.name : (newComment.userName || guestName.trim() || 'Tamu') }, ...prev]);
     setText('');
     setGuestName('');
   } catch (err) { alert(err.message); }
@@ -179,10 +180,9 @@ const handleSend = async (e) => {
               <div className="flex items-start justify-between gap-2 mb-1.5">
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black text-white flex-shrink-0 ${isDarkMode ? 'bg-orange-600' : 'bg-orange-500'}`}>
-                   {(c.guestName || 'T')[0].toUpperCase()}
-                    {c.guestName || 'Tamu'}
+                    {(c.userName || c.guestName || 'T')[0].toUpperCase()}
                   </div>
-                  <span className={`font-bold text-sm ${textColor}`}>{c.userName}</span>
+                  <span className={`font-bold text-sm ${textColor}`}>{c.userName || c.guestName || 'Tamu'}</span>
                   <span className={`text-xs ${textMuted}`}>{formatDate(c.createdAt)}</span>
                 </div>
                 {(user?.role === 'admin' || Number(c.userId) === Number(user?.id)) && (
@@ -276,6 +276,7 @@ export function RecipeDetail({
           <button
             onClick={() => {
               if (!user) { alert('Login dulu untuk menambah favorit'); return; }
+              if (user.role === 'admin') { alert('Admin tidak dapat memfavoritkan resep'); return; }
               onToggleFavorite(recipe.id);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all shadow-sm border ${isFav ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100' : isDarkMode ? 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
@@ -322,8 +323,10 @@ export function RecipeDetail({
                 <StarRating
                   recipeId={recipe.id}
                   ratings={ratings || {}}
+                  user={user}
                   onRate={(star) => {
                     if (!user) { alert('Login dulu untuk memberi rating'); return; }
+                    if (user.role === 'admin') return;
                     onRate(recipe.id, star);
                   }}
                   isDarkMode={true}

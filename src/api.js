@@ -145,12 +145,14 @@ getByRecipe: async (recipeId) => {
     .eq('recipeId', recipeId)
     .order('createdAt', { ascending: true })
   if (error) {
-    // fallback tanpa join
     const { data: d2 } = await supabase
       .from('comments').select('*').eq('recipeId', recipeId)
-    return d2 || []
+    return (d2 || []).map(c => ({ ...c, userName: c.userName || c.guestName || 'Tamu' }))
   }
-  return data || []
+  return (data || []).map(c => ({
+    ...c,
+    userName: c.users?.name || c.userName || c.guestName || 'Tamu',
+  }))
 },
 send: async (userId, recipeId, content, guestName = null) => {
   const { data, error } = await supabase
@@ -159,12 +161,29 @@ send: async (userId, recipeId, content, guestName = null) => {
       userId, 
       recipeId, 
       content, 
-      guestName,
-      userName: guestName || null  // akan diisi dari user nanti
+      guestName: userId ? null : (guestName || 'Tamu'),
+      userName: guestName || null
     }])
     .select().single()
   if (error) throw error
   return data
+},
+reply: async (commentId, replyText) => {
+  const { data, error } = await supabase
+    .from('comments')
+    .update({ adminReply: replyText })
+    .eq('id', commentId)
+    .select().single()
+  if (error) throw error
+  return data
+},
+delete: async (commentId) => {
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', commentId)
+  if (error) throw error
+  return { success: true }
 },
 }
 
@@ -185,9 +204,38 @@ export const adminAPI = {
     }
   },
   getRecipeStats: async () => {
-    const { data, error } = await supabase
-      .from('recipes').select('id, title, category')
-    if (error) throw error
-    return data || []
+    const [recipesRes, historiesRes, favoritesRes, ratingsRes] = await Promise.all([
+      supabase.from('recipes').select('id, title, category'),
+      supabase.from('histories').select('recipeId'),
+      supabase.from('favorites').select('recipeId'),
+      supabase.from('ratings').select('recipeId, star'),
+    ])
+    const recipes   = recipesRes.data   || []
+    const histories = historiesRes.data || []
+    const favorites = favoritesRes.data || []
+    const ratings   = ratingsRes.data   || []
+
+    const totalVisits    = histories.length || 1
+    const totalFavorites = favorites.length || 1
+
+    const stats = {}
+    recipes.forEach(r => {
+      const id         = r.id
+      const visits     = histories.filter(h => Number(h.recipeId) === Number(id)).length
+      const favs       = favorites.filter(f => Number(f.recipeId) === Number(id)).length
+      const recRatings = ratings.filter(rt => Number(rt.recipeId) === Number(id))
+      const avgRating  = recRatings.length
+        ? recRatings.reduce((s, rt) => s + rt.star, 0) / recRatings.length
+        : 0
+      stats[id] = {
+        visitCount:  visits,
+        favCount:    favs,
+        visitPct:    Math.round((visits / totalVisits) * 100),
+        savedPct:    Math.round((favs / totalFavorites) * 100),
+        avgRating:   Math.round(avgRating * 10) / 10,
+        ratingCount: recRatings.length,
+      }
+    })
+    return stats
   }
 }

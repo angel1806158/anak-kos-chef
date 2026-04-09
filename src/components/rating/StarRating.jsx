@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 
-export function StarRating({ recipeId, ratings, onRate, isDarkMode, size = 'sm', allowGuest = true }) {
+export function StarRating({ recipeId, ratings, onRate, isDarkMode, size = 'sm', allowGuest = true, user }) {
   const [hovered, setHovered] = useState(0);
   const current = ratings[recipeId] ?? 0;
   const sz = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+  // Disabled jika: tidak boleh guest DAN belum login, ATAU user adalah admin
+  const isDisabled = (!allowGuest && !user) || user?.role === 'admin';
 
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
-          onClick={(e) => { e.stopPropagation(); onRate(star); }}
-          onMouseEnter={() => setHovered(star)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isDisabled) {
+              if (!user) alert('Login dulu untuk memberi rating');
+              return;
+            }
+            onRate(star);
+          }}
+          onMouseEnter={() => { if (!isDisabled) setHovered(star); }}
           onMouseLeave={() => setHovered(0)}
-          className="transition-transform hover:scale-110 active:scale-95"
+          className={`transition-transform ${isDisabled ? 'cursor-not-allowed opacity-60' : 'hover:scale-110 active:scale-95'}`}
         >
           <Star
             className={`${sz} transition-colors ${
