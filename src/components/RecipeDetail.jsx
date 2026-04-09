@@ -1,3 +1,4 @@
+import { supabase } from '../supabase';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ChevronLeft, Heart, Clock, Wallet, Flame, Utensils, ChefHat,
@@ -76,23 +77,36 @@ function CommentSection({ recipeId, user, isDarkMode, textColor, textMuted, card
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [recipeId]);
+useEffect(() => {
+  load();
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-    setSending(true);
-    try {
-      const newComment = await commentAPI.send(
-        recipeId, text.trim(),
-        user ? undefined : (guestName.trim() || 'Tamu')
-      );
-      setComments(prev => [newComment, ...prev]);
-      setText('');
-      setGuestName('');
-    } catch (err) { alert(err.message); }
-    setSending(false);
-  };
+  const channel = supabase
+    .channel('comments-' + recipeId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
+      load();
+    })
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [recipeId]);
+
+const handleSend = async (e) => {
+  e.preventDefault();
+  if (!text.trim()) return;
+  setSending(true);
+  try {
+    const newComment = await commentAPI.send(
+      user?.id ?? null,
+      recipeId,
+      text.trim(),
+      user ? undefined : (guestName.trim() || 'Tamu')
+    );
+    setComments(prev => [newComment, ...prev]);
+    setText('');
+    setGuestName('');
+  } catch (err) { alert(err.message); }
+  setSending(false);
+};
 
   const handleReply = async (commentId) => {
     if (!replyText.trim()) return;
