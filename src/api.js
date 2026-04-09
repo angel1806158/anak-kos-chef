@@ -12,13 +12,11 @@ export const authAPI = {
     return { user: data[0], token: 'custom-' + data[0].id }
   },
   register: async (name, identifier, password) => {
-    // Cek dulu apakah identifier sudah ada
     const { data: existing } = await supabase
       .from('users')
       .select('id')
       .eq('identifier', identifier)
     if (existing && existing.length > 0) throw new Error('Email sudah terdaftar')
-
     const { data, error } = await supabase
       .from('users')
       .insert([{ name, identifier, password, role: 'user' }])
