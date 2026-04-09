@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { authAPI } from '../api';
-import { AVATAR_COLORS, getInitials, decodeJWT } from '../config';
+import { AVATAR_COLORS, getInitials } from '../config';
 
 const buildUser = (raw) => ({
   ...raw,
-  avatar:      getInitials(raw.name),
+  avatar:      getInitials(raw.name || ''),
   avatarColor: AVATAR_COLORS[raw.role] ?? AVATAR_COLORS.user,
 });
 
@@ -12,39 +12,36 @@ export function useAuth() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Restore session dari token tersimpan
+  // Restore session dari localStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { setAuthLoading(false); return; }
-
-    const payload = decodeJWT(token);
-    if (!payload || payload.exp * 1000 <= Date.now()) {
-      localStorage.removeItem('token');
-      setAuthLoading(false);
-      return;
-    }
-    setCurrentUser(buildUser(payload));
+    try {
+      const saved = localStorage.getItem('anakkos_user');
+      if (saved) {
+        const user = JSON.parse(saved);
+        setCurrentUser(buildUser(user));
+      }
+    } catch {}
     setAuthLoading(false);
   }, []);
 
   const login = async ({ identifier, password }) => {
-    const data = await authAPI.login({ identifier, password });
-    localStorage.setItem('token', data.token);
+    const data = await authAPI.login(identifier, password);
+    localStorage.setItem('anakkos_user', JSON.stringify(data.user));
     const user = buildUser(data.user);
     setCurrentUser(user);
     return user;
   };
 
   const register = async ({ name, identifier, password }) => {
-    const data = await authAPI.register({ name, identifier, password });
-    localStorage.setItem('token', data.token);
+    const data = await authAPI.register(name, identifier, password);
+    localStorage.setItem('anakkos_user', JSON.stringify(data.user));
     const user = buildUser(data.user);
     setCurrentUser(user);
     return user;
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('anakkos_user');
     setCurrentUser(null);
   };
 

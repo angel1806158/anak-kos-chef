@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 
+// --- Auth ---
 export const authAPI = {
   login: async (identifier, password) => {
     const { data, error } = await supabase
@@ -7,23 +8,18 @@ export const authAPI = {
       .select('*')
       .eq('identifier', identifier)
       .eq('password', password)
-    if (error) throw error
-    if (!data || data.length === 0) throw new Error('Email atau password salah')
-    return { user: data[0], token: 'custom-' + data[0].id }
+      .single()
+    if (error || !data) throw new Error('Email atau password salah')
+    return { user: data, token: 'custom-' + data.id }
   },
   register: async (name, identifier, password) => {
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .eq('identifier', identifier)
-    if (existing && existing.length > 0) throw new Error('Email sudah terdaftar')
     const { data, error } = await supabase
       .from('users')
       .insert([{ name, identifier, password, role: 'user' }])
       .select()
+      .single()
     if (error) throw error
-    if (!data || data.length === 0) throw new Error('Gagal membuat akun')
-    return { success: true, user: data[0] }
+    return { success: true, user: data }
   }
 }
 
