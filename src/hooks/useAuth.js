@@ -4,7 +4,8 @@ import { AVATAR_COLORS, getInitials } from '../config';
 
 const buildUser = (raw) => ({
   ...raw,
-  avatar:      getInitials(raw.name || ''),
+  id: Number(raw.id), // pastikan selalu integer
+  avatar: getInitials(raw.name || ''),
   avatarColor: AVATAR_COLORS[raw.role] ?? AVATAR_COLORS.user,
 });
 
@@ -12,7 +13,6 @@ export function useAuth() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Restore session dari localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('anakkos_user');
