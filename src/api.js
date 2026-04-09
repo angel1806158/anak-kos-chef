@@ -138,28 +138,34 @@ export const ratingAPI = {
 
 // --- Comments ---
 export const commentAPI = {
-  getByRecipe: async (recipeId) => {
-    const { data, error } = await supabase
-      .from('comments')
-      .select('*, users(name, avatar, avatarColor)')
-      .eq('recipeId', recipeId)
-      .order('createdAt', { ascending: true })
-    if (error) throw error
-    return data || []
-  },
-  send: async (userId, recipeId, content, guestName = null) => {
-    const { data, error } = await supabase
-      .from('comments')
-      .insert([{ userId, recipeId, content, guestName }])
-      .select().single()
-    if (error) throw error
-    return data
-  },
-  delete: async (id) => {
-    const { error } = await supabase.from('comments').delete().eq('id', id)
-    if (error) throw error
-    return { success: true }
+getByRecipe: async (recipeId) => {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*, users!comments_userId_fkey(name)')
+    .eq('recipeId', recipeId)
+    .order('createdAt', { ascending: true })
+  if (error) {
+    // fallback tanpa join
+    const { data: d2 } = await supabase
+      .from('comments').select('*').eq('recipeId', recipeId)
+    return d2 || []
   }
+  return data || []
+},
+send: async (userId, recipeId, content, guestName = null) => {
+  const { data, error } = await supabase
+    .from('comments')
+    .insert([{ 
+      userId, 
+      recipeId, 
+      content, 
+      guestName,
+      userName: guestName || null  // akan diisi dari user nanti
+    }])
+    .select().single()
+  if (error) throw error
+  return data
+},
 }
 
 // --- Admin ---

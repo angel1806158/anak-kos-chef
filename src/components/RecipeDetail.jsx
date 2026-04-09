@@ -96,11 +96,11 @@ const handleSend = async (e) => {
   setSending(true);
   try {
     const newComment = await commentAPI.send(
-      user?.id ?? null,
-      recipeId,
-      text.trim(),
-      user ? undefined : (guestName.trim() || 'Tamu')
-    );
+  user?.id ?? null,
+  recipeId,
+  text.trim(),
+  user ? user.name : (guestName.trim() || 'Tamu')
+);
     setComments(prev => [newComment, ...prev]);
     setText('');
     setGuestName('');
@@ -179,7 +179,8 @@ const handleSend = async (e) => {
               <div className="flex items-start justify-between gap-2 mb-1.5">
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black text-white flex-shrink-0 ${isDarkMode ? 'bg-orange-600' : 'bg-orange-500'}`}>
-                    {(c.userName || 'T')[0].toUpperCase()}
+                    {(c.users?.name || c.guestName || 'Tamu')[0].toUpperCase()}
+                    {c.users?.name || c.guestName || 'Tamu'}
                   </div>
                   <span className={`font-bold text-sm ${textColor}`}>{c.userName}</span>
                   <span className={`text-xs ${textMuted}`}>{formatDate(c.createdAt)}</span>
