@@ -1,9 +1,8 @@
 import { supabase } from './supabase'
 
-// ─── Auth ────────────────────────────────────────────────────
+// --- Auth ---
 export const authAPI = {
   login: async (identifier, password) => {
-    // Cek di tabel users custom (bukan Supabase Auth)
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -24,7 +23,7 @@ export const authAPI = {
   }
 }
 
-// ─── Recipes ─────────────────────────────────────────────────
+// --- Recipes ---
 export const recipeAPI = {
   getAll: async (filters = {}) => {
     let query = supabase.from('recipes').select('*')
@@ -62,7 +61,7 @@ export const recipeAPI = {
   }
 }
 
-// ─── Favorites ───────────────────────────────────────────────
+// --- Favorites ---
 export const favoriteAPI = {
   getAll: async (userId) => {
     const { data, error } = await supabase
@@ -90,7 +89,7 @@ export const favoriteAPI = {
   }
 }
 
-// ─── History ─────────────────────────────────────────────────
+// --- History ---
 export const historyAPI = {
   getAll: async (userId) => {
     const { data, error } = await supabase
@@ -102,7 +101,6 @@ export const historyAPI = {
     return data || []
   },
   add: async (userId, recipeId) => {
-    // Hindari duplikat
     await supabase.from('histories')
       .delete().eq('userId', userId).eq('recipeId', recipeId)
     const { data, error } = await supabase
@@ -119,7 +117,7 @@ export const historyAPI = {
   }
 }
 
-// ─── Ratings ─────────────────────────────────────────────────
+// --- Ratings ---
 export const ratingAPI = {
   getAll: async (recipeId) => {
     const { data, error } = await supabase
@@ -138,7 +136,7 @@ export const ratingAPI = {
   }
 }
 
-// ─── Comments ────────────────────────────────────────────────
+// --- Comments ---
 export const commentAPI = {
   getByRecipe: async (recipeId) => {
     const { data, error } = await supabase
@@ -164,7 +162,7 @@ export const commentAPI = {
   }
 }
 
-// ─── Admin ───────────────────────────────────────────────────
+// --- Admin ---
 export const adminAPI = {
   getDashboardStats: async () => {
     const [r, u, c, f] = await Promise.all([
@@ -174,9 +172,9 @@ export const adminAPI = {
       supabase.from('favorites').select('*', { count: 'exact', head: true }),
     ])
     return {
-      totalRecipes:  r.count || 0,
-      totalUsers:    u.count || 0,
-      totalComments: c.count || 0,
+      totalRecipes:   r.count || 0,
+      totalUsers:     u.count || 0,
+      totalComments:  c.count || 0,
       totalFavorites: f.count || 0,
     }
   },
