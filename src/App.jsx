@@ -133,8 +133,14 @@ export default function App() {
 
   const handleNavigate = (view) => { setActiveView(view); setActiveRecipeId(null); };
 
-const handleLoginSuccess = (user) => {
-  if (!user) return;
+const handleLoginSuccess = async (mode, form) => {
+  let user;
+  if (mode === 'register') {
+    user = await register({ name: form.name, identifier: form.identifier, password: form.password });
+  } else {
+    user = await login({ identifier: form.identifier, password: form.password });
+  }
+  if (mode === 'admin' && user.role !== 'admin') throw new Error('Akun ini bukan admin.');
   setShowAuthModal(false);
   setShowProfilePanel(true);
 };

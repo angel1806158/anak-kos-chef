@@ -14,37 +14,31 @@ export function AuthModal({ isDarkMode, onClose, onLoginSuccess }) {
     setMode(nextMode);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      if (mode === 'user_register') {
-        if (!form.identifier || !form.name || !form.password || !form.confirmPassword)
-          throw new Error('Semua kolom wajib diisi.');
-        if (form.password !== form.confirmPassword)
-          throw new Error('Password tidak cocok.');
-        const result = await authAPI.register(form.name, form.identifier, form.password);
-        onLoginSuccess(result.user);
-
-      } else if (mode === 'user_login') {
-        if (!form.identifier || !form.password)
-          throw new Error('Email dan password wajib diisi.');
-        const result = await authAPI.login(form.identifier, form.password);
-        onLoginSuccess(result.user);
-
-      } else if (mode === 'admin_login') {
-        if (!form.identifier || !form.adminCode)
-          throw new Error('Isi semua data admin.');
-        const result = await authAPI.login(form.identifier, form.adminCode);
-        if (result.user.role !== 'admin') throw new Error('Bukan akun admin.');
-        onLoginSuccess(result.user);
-      }
-    } catch (err) {
-      setError(err.message);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
+  try {
+    if (mode === 'user_register') {
+      if (!form.identifier || !form.name || !form.password || !form.confirmPassword)
+        throw new Error('Semua kolom wajib diisi.');
+      if (form.password !== form.confirmPassword)
+        throw new Error('Password tidak cocok.');
+      await onLoginSuccess('register', { name: form.name, identifier: form.identifier, password: form.password });
+    } else if (mode === 'user_login') {
+      if (!form.identifier || !form.password)
+        throw new Error('Email dan password wajib diisi.');
+      await onLoginSuccess('login', { identifier: form.identifier, password: form.password });
+    } else if (mode === 'admin_login') {
+      if (!form.identifier || !form.adminCode)
+        throw new Error('Isi semua data admin.');
+      await onLoginSuccess('admin', { identifier: form.identifier, password: form.adminCode });
     }
-    setLoading(false);
-  };
+  } catch (err) {
+    setError(err.message);
+  }
+  setLoading(false);
+};
 
   const inputClass = `w-full px-4 py-3 border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-800'} rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-orange-400 transition`;
 
