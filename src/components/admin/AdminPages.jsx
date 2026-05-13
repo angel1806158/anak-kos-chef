@@ -671,6 +671,7 @@ export function AdminSongManagerPage({ isDarkMode, textColor, textMuted, cardBg,
   const [error,     setError]     = useState('');
   const [saved,     setSaved]     = useState(false);
   const [loading,   setLoading]   = useState(true);
+  const [previewId, setPreviewId] = useState(null);
 
   useEffect(() => {
     supabase.from('songs').select('*').order('id', { ascending: true })
@@ -703,6 +704,22 @@ export function AdminSongManagerPage({ isDarkMode, textColor, textMuted, cardBg,
     await supabase.from('songs').delete().eq('id', songId);
     setSongs(prev => prev.filter(s => s.id !== songId));
   };
+
+  {previewId && (
+  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setPreviewId(null)}>
+    <div className="w-full max-w-2xl aspect-video rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+      <iframe
+        src={`https://www.youtube.com/embed/${previewId}?autoplay=1`}
+        className="w-full h-full"
+        allow="autoplay; encrypted-media"
+        allowFullScreen
+      />
+    </div>
+    <button onClick={() => setPreviewId(null)} className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2">
+      <X className="w-5 h-5" />
+    </button>
+  </div>
+)}
 
   return (
     <div className="max-w-2xl mx-auto pb-12 animate-in fade-in duration-300">
@@ -761,10 +778,10 @@ export function AdminSongManagerPage({ isDarkMode, textColor, textMuted, cardBg,
                   <p className={`font-semibold text-sm truncate ${textColor}`}>{s.title}</p>
                   <p className={`text-xs truncate ${textMuted}`}>ID: {s.youtube_id}</p>
                 </div>
-                <a href={`https://www.youtube.com/watch?v=${s.youtube_id}`} target="_blank" rel="noreferrer"
-                  className={`text-xs px-2 py-1 rounded-lg font-semibold ${isDarkMode ? 'text-blue-400 hover:bg-blue-500/10' : 'text-blue-500 hover:bg-blue-50'}`}>
-                  Preview
-                </a>
+<button onClick={() => setPreviewId(s.youtube_id)}
+  className={`text-xs px-2 py-1 rounded-lg font-semibold ${isDarkMode ? 'text-blue-400 hover:bg-blue-500/10' : 'text-blue-500 hover:bg-blue-50'}`}>
+  Preview
+</button>
                 <button onClick={() => handleDelete(s.id)}
                   className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'text-red-400 hover:bg-red-500/10' : 'text-red-400 hover:bg-red-50'}`}>
                   <Trash2 className="w-4 h-4" />
