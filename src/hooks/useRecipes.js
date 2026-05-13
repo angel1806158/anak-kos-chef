@@ -10,7 +10,7 @@ export function useRecipes(currentUser) {
 
   const userId = currentUser?.id ? Number(currentUser.id) : null
 
-  // ── Recipes (realtime) ──────────────────────────────────────
+  // ── Recipes (realtime) ──────────────────────────────────────────────
   useEffect(() => {
     async function getRecipes() {
       const { data, error } = await supabase.from('recipes').select('*')
@@ -27,7 +27,7 @@ export function useRecipes(currentUser) {
     return () => supabase.removeChannel(channel)
   }, [])
 
-  // ── Favorites (realtime) ────────────────────────────────────
+  // ── Favorites (realtime) ────────────────────────────────────────────
   useEffect(() => {
     if (!userId) { setFavorites([]); return }
 
@@ -48,7 +48,7 @@ export function useRecipes(currentUser) {
     return () => supabase.removeChannel(channel)
   }, [userId])
 
-  // ── History (realtime) ──────────────────────────────────────
+  // ── History (realtime) ──────────────────────────────────────────────
   useEffect(() => {
     if (!userId) { setRecipeHistory([]); return }
 
@@ -76,22 +76,30 @@ export function useRecipes(currentUser) {
     return () => supabase.removeChannel(channel)
   }, [userId])
 
-  // ── Ratings (realtime) ──────────────────────────────────────
+  // ── Ratings (realtime) ──────────────────────────────────────────────
   useEffect(() => {
     async function getRatings() {
       const { data } = await supabase.from('ratings').select('recipeId, star, userId')
       if (!data) return
-      const map = {}
+
+      // Hitung rata-rata per resep, dan simpan bintang user saat ini
+      const avgMap = {}   // { recipeId: { total, count } }
+      const userMap = {}  // { recipeId: star } khusus user ini
+
       data.forEach(r => {
         const rid = Number(r.recipeId)
-        if (!map[rid]) map[rid] = { total: 0, count: 0, userStar: null }
-        map[rid].total += r.star
-        map[rid].count += 1
-        if (Number(r.userId) === userId) map[rid].userStar = r.star
+        if (!avgMap[rid]) avgMap[rid] = { total: 0, count: 0 }
+        avgMap[rid].total += r.star
+        avgMap[rid].count += 1
+        if (userId && Number(r.userId) === userId) {
+          userMap[rid] = r.star
+        }
       })
+
       const result = {}
-      Object.keys(map).forEach(id => {
-        result[id] = map[id].userStar ?? (map[id].total / map[id].count)
+      Object.keys(avgMap).forEach(rid => {
+        // Tampilkan bintang user jika sudah rating, kalau belum tampilkan rata-rata
+        result[rid] = userMap[rid] ?? (avgMap[rid].total / avgMap[rid].count)
       })
       setRatings(result)
     }
@@ -105,46 +113,77 @@ export function useRecipes(currentUser) {
     return () => supabase.removeChannel(channel)
   }, [userId])
 
-  // ── Toggle Favorite ─────────────────────────────────────────
+  // ── Toggle Favorite ─────────────────────────────────────────────────
   const toggleFavorite = useCallback(async (recipeId) => {
     if (!userId) { alert('Login dulu untuk menyimpan favorit'); return }
     const rid = Number(recipeId)
     const isFav = favorites.includes(rid)
+
+    // Optimistic update: langsung update state dulu biar terasa cepat
+    setFavorites(prev => isFav ? prev.filter(id => id !== rid) : [...prev, rid])
+
     if (isFav) {
-      await supabase.from('favorites')
+      const { error } = await supabase.from('favorites')
         .delete().eq('userId', userId).eq('recipeId', rid)
+      // Rollback kalau gagal
+      if (error) setFavorites(prev => [...prev, rid])
     } else {
-      await supabase.from('favorites')
+      const { error } = await supabase.from('favorites')
         .insert([{ userId, recipeId: rid }])
+      // Rollback kalau gagal
+      if (error) setFavorites(prev => prev.filter(id => id !== rid))
     }
   }, [userId, favorites])
 
-  // ── Add to History ──────────────────────────────────────────
+  // ── Add to History ──────────────────────────────────────────────────
   const addToHistory = useCallback(async (recipe) => {
     if (!userId) return
     const rid = Number(recipe.id)
+    // Hapus dulu kalau sudah ada (biar tidak duplikat), lalu insert baru
     await supabase.from('histories')
       .delete().eq('userId', userId).eq('recipeId', rid)
     await supabase.from('histories')
       .insert([{ userId, recipeId: rid, visitedAt: new Date().toISOString() }])
   }, [userId])
 
-  // ── Clear History ───────────────────────────────────────────
+  // ── Clear History ───────────────────────────────────────────────────
   const clearHistory = useCallback(async () => {
     if (!userId) return
     await supabase.from('histories').delete().eq('userId', userId)
   }, [userId])
 
-  // ── Handle Rate ─────────────────────────────────────────────
+  // ── Handle Rate ─────────────────────────────────────────────────────
   const handleRate = useCallback(async (recipeId, star) => {
     if (!userId) { alert('Login dulu untuk memberi rating'); return }
     const rid = Number(recipeId)
-    const { error } = await supabase.from('ratings')
-      .upsert([{ userId, recipeId: rid, star }], { onConflict: 'userId,recipeId' })
-    if (error) console.error('Rating error:', error)
+
+    // Optimistic update
+    setRatings(prev => ({ ...prev, [rid]: star }))
+
+    // Cek apakah sudah pernah rating
+    const { data: existing } = await supabase
+      .from('ratings')
+      .select('id')
+      .eq('userId', userId)
+      .eq('recipeId', rid)
+      .single()
+
+    if (existing) {
+      // Update
+      const { error } = await supabase.from('ratings')
+        .update({ star })
+        .eq('userId', userId)
+        .eq('recipeId', rid)
+      if (error) console.error('Rating update error:', error)
+    } else {
+      // Insert baru
+      const { error } = await supabase.from('ratings')
+        .insert([{ userId, recipeId: rid, star }])
+      if (error) console.error('Rating insert error:', error)
+    }
   }, [userId])
 
-  // ── CRUD Recipes ────────────────────────────────────────────
+  // ── CRUD Recipes ────────────────────────────────────────────────────
   const createRecipe = async (data) => {
     const { data: saved, error } = await supabase
       .from('recipes').insert([data]).select()
@@ -183,12 +222,17 @@ export function useFilteredRecipes(recipesData, { filters, showFavorites, favori
     }
 
     if (selectedIngredients.length > 0) {
-      result = result.filter(r =>
-        r.ingredients?.some(i => {
-          const name = typeof i === 'string' ? i : (i?.name ?? '')
-          return selectedIngredients.some(s => name.toLowerCase().includes(s.toLowerCase()))
-        })
-      )
+      result = result.filter(r => {
+        const ingredients = Array.isArray(r.ingredients)
+          ? r.ingredients
+          : (() => { try { return JSON.parse(r.ingredients || '[]') } catch { return [] } })()
+        return selectedIngredients.some(s =>
+          ingredients.some(i => {
+            const name = typeof i === 'string' ? i : (i?.name ?? '')
+            return name.toLowerCase().includes(s.toLowerCase())
+          })
+        )
+      })
     }
 
     return result
