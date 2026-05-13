@@ -162,10 +162,11 @@ export function useRecipes(currentUser) {
   }, [userId])
 
   // ── Clear History ───────────────────────────────────────────────────
-  const clearHistory = useCallback(async () => {
-    if (!userId) return
-    await supabase.from('histories').delete().eq('userId', userId)
-  }, [userId])
+const clearHistory = useCallback(async () => {
+  if (!userId) return
+  await supabase.from('histories').delete().eq('userId', userId)
+  setRecipeHistory([])
+}, [userId])
 
   // ── Handle Rate ─────────────────────────────────────────────────────
   const handleRate = useCallback(async (recipeId, star) => {
