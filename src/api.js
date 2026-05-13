@@ -158,6 +158,7 @@ export const commentAPI = {
         userId,
         recipeId,
         content,
+        createdAt: new Date().toISOString(),  // ← tambah ini
         guestName: userId ? null : (guestName || 'Tamu'),
         userName: guestName || null
       }])
