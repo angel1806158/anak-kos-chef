@@ -128,11 +128,14 @@ const handleSend = async (e) => {
     } catch (err) { alert(err.message); }
   };
 
-const formatDate = (d) => new Date(d).toLocaleString('id-ID', {
-  day: '2-digit', month: 'short', year: 'numeric',
-  hour: '2-digit', minute: '2-digit',
-  timeZone: 'Asia/Jakarta'
-});
+const formatDate = (d) => {
+  const date = new Date(d);
+  const wib = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+  return wib.toLocaleString('id-ID', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+};
 
   return (
     <div className={`mt-8 ${cardBg} rounded-2xl border p-6`}>
