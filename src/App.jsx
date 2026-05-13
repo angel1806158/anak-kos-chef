@@ -226,7 +226,7 @@ const handleLoginSuccess = async (mode, form) => {
             <iframe
               key={currentSong.id}
               width="0" height="0"
-              src={`https://www.youtube.com/embed/${currentSong.id}?autoplay=1&mute=${isMuted ? 1 : 0}`}
+              src={`https://www.youtube.com/embed/${currentSong.youtube_id}?autoplay=1&mute=${isMuted ? 1 : 0}`}
               allow="autoplay"
               title="party music"
               className="hidden"
@@ -235,7 +235,7 @@ const handleLoginSuccess = async (mode, form) => {
 
           {/* Playlist dropdown */}
           {showPlaylist && songs.length > 0 && (
-            <div className={`rounded-2xl shadow-2xl border p-3 w-64 max-h-60 overflow-y-auto ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+           <div className={`rounded-2xl shadow-2xl border p-3 w-64 max-h-60 overflow-y-scroll overscroll-contain ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
               <p className={`text-xs font-bold mb-2 px-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Pilih Lagu</p>
               {songs.map((s, i) => (
                 <button key={s.id} onClick={() => { setCurrentSongIdx(i); setShowPlaylist(false); }}
