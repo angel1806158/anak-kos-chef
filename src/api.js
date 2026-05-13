@@ -138,53 +138,52 @@ export const ratingAPI = {
 
 // --- Comments ---
 export const commentAPI = {
-getByRecipe: async (recipeId) => {
-  const { data, error } = await supabase
-    .from('comments')
-    .select('*, users!comments_userId_fkey(name)')
-    .eq('recipeId', recipeId)
-    .order('createdAt', { ascending: true })
-  if (error) {
-    const { data: d2 } = await supabase
-      .from('comments').select('*').eq('recipeId', recipeId)
-    return (d2 || []).map(c => ({ ...c, userName: c.userName || c.guestName || 'Tamu' }))
+  getByRecipe: async (recipeId) => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('recipeId', recipeId)
+      .order('createdAt', { ascending: true })
+    if (error) throw error
+    return (data || []).map(c => ({
+      ...c,
+      userName: c.userName || c.guestName || 'Tamu'
+    }))
+  },
+
+  send: async (userId, recipeId, content, guestName = null) => {
+    const { data, error } = await supabase
+      .from('comments')
+      .insert([{
+        userId,
+        recipeId,
+        content,
+        guestName: userId ? null : (guestName || 'Tamu'),
+        userName: guestName || null
+      }])
+      .select().single()
+    if (error) throw error
+    return data
+  },
+
+  reply: async (commentId, replyText) => {
+    const { data, error } = await supabase
+      .from('comments')
+      .update({ adminReply: replyText })
+      .eq('id', commentId)
+      .select().single()
+    if (error) throw error
+    return data
+  },
+
+  delete: async (commentId) => {
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+    if (error) throw error
+    return { success: true }
   }
-  return (data || []).map(c => ({
-    ...c,
-    userName: c.users?.name || c.userName || c.guestName || 'Tamu',
-  }))
-},
-send: async (userId, recipeId, content, guestName = null) => {
-  const { data, error } = await supabase
-    .from('comments')
-    .insert([{ 
-      userId, 
-      recipeId, 
-      content, 
-      guestName: userId ? null : (guestName || 'Tamu'),
-      userName: guestName || null
-    }])
-    .select().single()
-  if (error) throw error
-  return data
-},
-reply: async (commentId, replyText) => {
-  const { data, error } = await supabase
-    .from('comments')
-    .update({ adminReply: replyText })
-    .eq('id', commentId)
-    .select().single()
-  if (error) throw error
-  return data
-},
-delete: async (commentId) => {
-  const { error } = await supabase
-    .from('comments')
-    .delete()
-    .eq('id', commentId)
-  if (error) throw error
-  return { success: true }
-},
 }
 
 // --- Admin ---
