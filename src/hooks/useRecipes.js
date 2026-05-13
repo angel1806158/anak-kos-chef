@@ -151,15 +151,27 @@ export function useRecipes(currentUser) {
   }, [userId, favorites])
 
   // ── Add to History ──────────────────────────────────────────────────
-  const addToHistory = useCallback(async (recipe) => {
-    if (!userId) return
-    const rid = Number(recipe.id)
-    // Hapus dulu kalau sudah ada (biar tidak duplikat), lalu insert baru
-    await supabase.from('histories')
-      .delete().eq('userId', userId).eq('recipeId', rid)
-    await supabase.from('histories')
-      .insert([{ userId, recipeId: rid, visitedAt: new Date().toISOString() }])
-  }, [userId])
+const addToHistory = useCallback(async (recipe) => {
+  if (!userId) return
+  const rid = Number(recipe.id)
+  
+  // Optimistic update: langsung tambah ke state
+  setRecipeHistory(prev => {
+    const filtered = prev.filter(h => h.id !== rid)
+    return [{
+      id: rid,
+      title: recipe.title,
+      image: recipe.image,
+      visitedAt: new Date().toLocaleString('id-ID'),
+    }, ...filtered].slice(0, 20)
+  })
+
+  // Simpan ke database
+  await supabase.from('histories')
+    .delete().eq('userId', userId).eq('recipeId', rid)
+  await supabase.from('histories')
+    .insert([{ userId, recipeId: rid, visitedAt: new Date().toISOString() }])
+}, [userId])
 
   // ── Clear History ───────────────────────────────────────────────────
 const clearHistory = useCallback(async () => {
