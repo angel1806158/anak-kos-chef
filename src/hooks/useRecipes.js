@@ -52,20 +52,35 @@ export function useRecipes(currentUser) {
   useEffect(() => {
     if (!userId) { setRecipeHistory([]); return }
 
-    async function getHistory() {
-      const { data } = await supabase
-        .from('histories')
-        .select('*, recipes(*)')
-        .eq('userId', userId)
-        .order('visitedAt', { ascending: false })
-        .limit(20)
-      setRecipeHistory((data || []).map(h => ({
-        id: Number(h.recipeId),
-        title: h.recipes?.title,
-        image: h.recipes?.image,
-        visitedAt: new Date(h.visitedAt).toLocaleString('id-ID'),
-      })))
-    }
+ async function getHistory() {
+  const { data: histData } = await supabase
+    .from('histories')
+    .select('*')
+    .eq('userId', userId)
+    .order('visitedAt', { ascending: false })
+    .limit(20)
+  
+  if (!histData || histData.length === 0) {
+    setRecipeHistory([])
+    return
+  }
+
+  const recipeIds = histData.map(h => h.recipeId)
+  const { data: recipeData } = await supabase
+    .from('recipes')
+    .select('id, title, image')
+    .in('id', recipeIds)
+
+  const recipeMap = {}
+  recipeData?.forEach(r => { recipeMap[r.id] = r })
+
+  setRecipeHistory(histData.map(h => ({
+    id: Number(h.recipeId),
+    title: recipeMap[h.recipeId]?.title,
+    image: recipeMap[h.recipeId]?.image,
+    visitedAt: new Date(h.visitedAt).toLocaleString('id-ID'),
+  })))
+}
     getHistory()
 
     const channel = supabase
