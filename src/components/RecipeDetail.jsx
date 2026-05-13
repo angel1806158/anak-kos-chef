@@ -128,9 +128,11 @@ const handleSend = async (e) => {
     } catch (err) { alert(err.message); }
   };
 
-  const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
+const formatDate = (d) => new Date(d).toLocaleString('id-ID', {
+  day: '2-digit', month: 'short', year: 'numeric',
+  hour: '2-digit', minute: '2-digit',
+  timeZone: 'Asia/Jakarta'
+});
 
   return (
     <div className={`mt-8 ${cardBg} rounded-2xl border p-6`}>
