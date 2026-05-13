@@ -314,14 +314,14 @@ export function RecipeDetail({
                 <span className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium">
                   <Clock className="w-4 h-4 mr-2" />{recipe.prepTime}
                 </span>
-                <span className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium">
-                  <Flame className="w-4 h-4 mr-2" />{recipe.level}
-                </span>
-                {costLabel && (
-                  <span className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium">
-                    <Wallet className="w-4 h-4 mr-2" />{costLabel}
-                  </span>
-                )}
+            <span className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium">
+  <Flame className="w-4 h-4 mr-2" />{recipe.level}
+</span>
+{budgetLabel && (
+  <span className="flex items-center bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium">
+    <Wallet className="w-4 h-4 mr-2" />{budgetLabel}
+  </span>
+)}
               </div>
               <div className="mt-3 flex items-center gap-2" onClick={e => e.stopPropagation()}>
                 <span className="text-white/70 text-sm">Rating:</span>
@@ -345,12 +345,6 @@ export function RecipeDetail({
 
         {/* Content */}
         <div className="p-6 sm:p-10">
-          {budgetLabel && (
-            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold mb-6 ${isDarkMode ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-              <Tag className="w-4 h-4" />Label Harga: {budgetLabel}
-            </div>
-          )}
-
           <div className="grid md:grid-cols-3 gap-10">
             {/* Ingredients */}
             <div className="md:col-span-1">
