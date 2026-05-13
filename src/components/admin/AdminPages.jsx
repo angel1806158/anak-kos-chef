@@ -660,39 +660,48 @@ function saveSongs(songs) {
   localStorage.setItem(SONGS_STORAGE_KEY, JSON.stringify(songs));
 }
 
+// ─── SONG MANAGER (Admin) - pakai Supabase ───────────────────
+import { supabase } from '../../supabase';
+
 export function AdminSongManagerPage({ isDarkMode, textColor, textMuted, cardBg, onBack }) {
   const { input, label: labelCls } = useFormTheme(isDarkMode);
-  const [songs,    setSongs]    = useState(loadSongs);
-  const [title,    setTitle]    = useState('');
-  const [youtubeId,setYoutubeId]= useState('');
-  const [error,    setError]    = useState('');
-  const [saved,    setSaved]    = useState(false);
+  const [songs,     setSongs]     = useState([]);
+  const [title,     setTitle]     = useState('');
+  const [youtubeId, setYoutubeId] = useState('');
+  const [error,     setError]     = useState('');
+  const [saved,     setSaved]     = useState(false);
+  const [loading,   setLoading]   = useState(true);
+
+  useEffect(() => {
+    supabase.from('songs').select('*').order('id', { ascending: true })
+      .then(({ data }) => setSongs(data || []))
+      .finally(() => setLoading(false));
+  }, []);
 
   const extractId = (val) => {
-    // Accept raw ID or full URL
     const urlMatch = val.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
     if (urlMatch) return urlMatch[1];
     if (/^[A-Za-z0-9_-]{11}$/.test(val.trim())) return val.trim();
     return null;
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     setError('');
     if (!title.trim()) { setError('Judul lagu wajib diisi'); return; }
     const id = extractId(youtubeId.trim());
-    if (!id) { setError('YouTube ID atau URL tidak valid. Contoh: dQw4w9WgXcQ'); return; }
-    if (songs.find(s => s.id === id)) { setError('Lagu sudah ada di daftar'); return; }
-    const newSongs = [...songs, { id, title: title.trim() }];
-    setSongs(newSongs);
-    saveSongs(newSongs);
+    if (!id) { setError('YouTube ID atau URL tidak valid'); return; }
+    if (songs.find(s => s.youtube_id === id)) { setError('Lagu sudah ada'); return; }
+    const { data, error: err } = await supabase
+      .from('songs').insert([{ title: title.trim(), youtube_id: id }]).select().single();
+    if (err) { setError('Gagal menyimpan lagu'); return; }
+    setSongs(prev => [...prev, data]);
     setTitle(''); setYoutubeId('');
     setSaved(true); setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleDelete = (id) => {
-    const newSongs = songs.filter(s => s.id !== id);
-    setSongs(newSongs);
-    saveSongs(newSongs);
+  const handleDelete = async (songId) => {
+    await supabase.from('songs').delete().eq('id', songId);
+    setSongs(prev => prev.filter(s => s.id !== songId));
   };
 
   return (
@@ -709,29 +718,20 @@ export function AdminSongManagerPage({ isDarkMode, textColor, textMuted, cardBg,
           <p className={`text-sm ${textMuted}`}>Tambah lagu dari YouTube untuk diputar pengguna</p>
         </div>
       </div>
-
-      {/* Form tambah lagu */}
       <div className={`${cardBg} rounded-2xl border shadow-sm p-6 mb-6`}>
         <h3 className={`font-bold mb-4 ${textColor}`}>Tambah Lagu Baru</h3>
         <div className="space-y-4">
           <div>
             <label className={`text-xs font-bold uppercase tracking-wide mb-2 block ${labelCls}`}>Judul Lagu</label>
-            <input
-              value={title} onChange={e => setTitle(e.target.value)}
+            <input value={title} onChange={e => setTitle(e.target.value)}
               placeholder="Contoh: Cha Cha Cha - Käärijä"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all ${input}`}
-            />
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all ${input}`} />
           </div>
           <div>
             <label className={`text-xs font-bold uppercase tracking-wide mb-2 block ${labelCls}`}>YouTube ID atau URL</label>
-            <input
-              value={youtubeId} onChange={e => setYoutubeId(e.target.value)}
+            <input value={youtubeId} onChange={e => setYoutubeId(e.target.value)}
               placeholder="Contoh: dQw4w9WgXcQ atau https://youtube.com/watch?v=..."
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all ${input}`}
-            />
-            <p className={`text-xs mt-1.5 ${textMuted}`}>
-              Copy ID dari URL YouTube: youtube.com/watch?v=<strong>ID_INI</strong>
-            </p>
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all ${input}`} />
           </div>
           {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
           <button onClick={handleAdd}
@@ -740,16 +740,14 @@ export function AdminSongManagerPage({ isDarkMode, textColor, textMuted, cardBg,
           </button>
         </div>
       </div>
-
-      {/* Daftar lagu */}
       <div className={`${cardBg} rounded-2xl border shadow-sm overflow-hidden`}>
-        <div className={`px-5 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} flex items-center justify-between`}>
-          <div className="flex items-center gap-2">
-            <ListMusic className={`w-4 h-4 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-500'}`} />
-            <h3 className={`font-bold ${textColor}`}>Daftar Lagu ({songs.length})</h3>
-          </div>
+        <div className={`px-5 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} flex items-center gap-2`}>
+          <ListMusic className={`w-4 h-4 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-500'}`} />
+          <h3 className={`font-bold ${textColor}`}>Daftar Lagu ({songs.length})</h3>
         </div>
-        {songs.length === 0 ? (
+        {loading ? (
+          <div className="py-12 flex justify-center"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+        ) : songs.length === 0 ? (
           <div className="py-12 text-center">
             <Music className={`w-10 h-10 mx-auto mb-3 ${textMuted}`} />
             <p className={`text-sm ${textMuted}`}>Belum ada lagu. Tambah lagu di atas!</p>
@@ -757,21 +755,18 @@ export function AdminSongManagerPage({ isDarkMode, textColor, textMuted, cardBg,
         ) : (
           <div className="divide-y divide-gray-100">
             {songs.map((s, idx) => (
-              <div key={s.id} className={`flex items-center gap-3 px-5 py-3 ${isDarkMode ? 'divide-gray-700' : ''}`}>
+              <div key={s.id} className="flex items-center gap-3 px-5 py-3">
                 <span className={`text-xs font-bold w-5 text-center ${textMuted}`}>{idx + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className={`font-semibold text-sm truncate ${textColor}`}>{s.title}</p>
-                  <p className={`text-xs truncate ${textMuted}`}>ID: {s.id}</p>
+                  <p className={`text-xs truncate ${textMuted}`}>ID: {s.youtube_id}</p>
                 </div>
-                <a
-                  href={`https://www.youtube.com/watch?v=${s.id}`}
-                  target="_blank" rel="noreferrer"
-                  className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'text-blue-400 hover:bg-blue-500/10' : 'text-blue-500 hover:bg-blue-50'} font-semibold`}
-                >
+                <a href={`https://www.youtube.com/watch?v=${s.youtube_id}`} target="_blank" rel="noreferrer"
+                  className={`text-xs px-2 py-1 rounded-lg font-semibold ${isDarkMode ? 'text-blue-400 hover:bg-blue-500/10' : 'text-blue-500 hover:bg-blue-50'}`}>
                   Preview
                 </a>
                 <button onClick={() => handleDelete(s.id)}
-                  className={`p-1.5 rounded-lg ${isDarkMode ? 'text-red-400 hover:bg-red-500/10' : 'text-red-400 hover:bg-red-50'} transition-colors`}>
+                  className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'text-red-400 hover:bg-red-500/10' : 'text-red-400 hover:bg-red-50'}`}>
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

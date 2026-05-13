@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   ChefHat, Music, Moon, Sun, User, Shield,
@@ -34,12 +35,7 @@ const GLOBAL_CSS = `
 
 const SONGS_STORAGE_KEY = 'anakkos_songs_v1';
 
-function loadSongsFromStorage() {
-  try {
-    const raw = localStorage.getItem(SONGS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
+function loadSongsFromStorage() { return []; }
 
 export default function App() {
   const { currentUser, authLoading, login, register, logout } = useAuth();
@@ -57,13 +53,12 @@ export default function App() {
   const [showPlaylist,   setShowPlaylist]   = useState(false);
 
   // Sync songs dari localStorage setiap kali party mode dibuka
-  useEffect(() => {
-    if (isDancing) {
-      const updated = loadSongsFromStorage();
-      setSongs(updated);
-      setCurrentSongIdx(0);
-    }
-  }, [isDancing]);
+useEffect(() => {
+  if (isDancing) {
+    supabase.from('songs').select('*').order('id', { ascending: true })
+      .then(({ data }) => { setSongs(data || []); setCurrentSongIdx(0); });
+  }
+}, [isDancing]);
 
   const {
     recipesData, favorites, recipeHistory, ratings,
