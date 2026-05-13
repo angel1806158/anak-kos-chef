@@ -49,47 +49,55 @@ export function useRecipes(currentUser) {
   }, [userId])
 
   // ── History (realtime) ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!userId) { setRecipeHistory([]); return }
+useEffect(() => {
+  if (!userId) { setRecipeHistory([]); return }
 
- async function getHistory() {
-  const { data: histData } = await supabase
-    .from('histories')
-    .select('*')
-    .eq('userId', userId)
-    .order('visitedAt', { ascending: false })
-    .limit(20)
-  
-  if (!histData || histData.length === 0) {
-    setRecipeHistory([])
-    return
+  async function getHistory() {
+    const { data: histData } = await supabase
+      .from('histories')
+      .select('*')
+      .eq('userId', userId)
+      .order('visitedAt', { ascending: false })
+      .limit(20)
+
+    if (!histData || histData.length === 0) {
+      setRecipeHistory([])
+      return
+    }
+
+    const recipeIds = histData.map(h => h.recipeId)
+    const { data: recipeData } = await supabase
+      .from('recipes')
+      .select('id, title, image')
+      .in('id', recipeIds)
+
+    const recipeMap = {}
+    recipeData?.forEach(r => { recipeMap[r.id] = r })
+
+    setRecipeHistory(histData.map(h => ({
+      id: Number(h.recipeId),
+      title: recipeMap[h.recipeId]?.title,
+      image: recipeMap[h.recipeId]?.image,
+      visitedAt: new Date(h.visitedAt).toLocaleString('id-ID'),
+    })))
   }
 
-  const recipeIds = histData.map(h => h.recipeId)
-  const { data: recipeData } = await supabase
-    .from('recipes')
-    .select('id, title, image')
-    .in('id', recipeIds)
+  getHistory()
 
-  const recipeMap = {}
-  recipeData?.forEach(r => { recipeMap[r.id] = r })
+  // Realtime channel
+  const channel = supabase
+    .channel('history-' + userId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'histories' }, getHistory)
+    .subscribe()
 
-  setRecipeHistory(histData.map(h => ({
-    id: Number(h.recipeId),
-    title: recipeMap[h.recipeId]?.title,
-    image: recipeMap[h.recipeId]?.image,
-    visitedAt: new Date(h.visitedAt).toLocaleString('id-ID'),
-  })))
-}
-    getHistory()
+  // Polling setiap 2 detik sebagai backup
+  const interval = setInterval(getHistory, 2000)
 
-    const channel = supabase
-      .channel('history-' + userId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'histories' }, getHistory)
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
-  }, [userId])
+  return () => {
+    supabase.removeChannel(channel)
+    clearInterval(interval)
+  }
+}, [userId])
 
   // ── Ratings (realtime) ──────────────────────────────────────────────
   useEffect(() => {
